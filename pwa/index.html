@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#082e28">
+  <meta name="description" content="TomatoIQ AI-powered tomato harvest intelligence">
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="stylesheet" href="/assets/style.css">
+  <title>TomatoIQ — Farm Intelligence</title>
+</head>
+<body>
+<div id="login-gate" class="login-gate" hidden>
+  <form id="login-form" class="login-card">
+    <div class="brand-mark">🍅</div>
+    <h1>Tomato<span>IQ</span></h1>
+    <p>Sign in to continue.</p>
+    <label>Username<input type="text" name="username" autocomplete="username" required></label>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <p id="login-error" class="login-error" hidden></p>
+    <button class="primary" type="submit">Sign in</button>
+  </form>
+</div>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">🍅</div>
+      <div><strong>Tomato<span>IQ</span></strong><small>Farm intelligence</small></div>
+    </div>
+    <nav id="nav" aria-label="Primary navigation">
+      <button class="nav-item active" data-view="dashboard"><span>▦</span>Dashboard</button>
+      <button class="nav-item" data-view="scanner"><span>◉</span>Live Scanner</button>
+      <button class="nav-item" data-view="tomatoes"><span>●</span>Tomato Profiles</button>
+      <button class="nav-item" data-view="harvest"><span>◫</span>Harvest Calendar</button>
+      <button class="nav-item" data-view="analytics"><span>⌁</span>Analytics</button>
+      <button class="nav-item" data-view="farm"><span>⌖</span>Farm Map</button>
+      <button class="nav-item" data-view="reports"><span>▤</span>Reports</button>
+      <button class="nav-item" data-view="notifications"><span>♧</span>Notifications <em id="nav-alert-count">0</em></button>
+      <button class="nav-item" data-view="settings"><span>⚙</span>Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="connection-dot"><i></i><span id="connection-label">Connecting</span></div>
+      <small id="sidebar-farm">—</small>
+      <button class="link-button" id="sign-out-button" hidden>Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobile-menu" aria-label="Open navigation">☰</button>
+      <div class="page-intro">
+        <span class="eyebrow">Farm overview</span>
+        <h1 id="greeting">Farm intelligence</h1>
+        <p id="subtitle">Live crop monitoring and harvest readiness.</p>
+      </div>
+      <div class="top-actions">
+        <label class="farm-select"><span>Farm</span><select id="farm-selector" aria-label="Select farm"></select></label>
+        <div class="live-pill" id="live-pill"><i></i><span>Connecting</span></div>
+        <div class="clock"><span id="current-date">—</span><strong id="current-time">—</strong></div>
+        <button class="icon-button" id="notifications-button" aria-label="Notifications">♧<b id="header-alert-count">0</b></button>
+      </div>
+    </header>
+
+    <div id="view-root"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+</div>
+
+<template id="dashboard-template">
+<section class="view dashboard-view">
+  <div class="kpi-grid" id="kpis"></div>
+  <div class="dashboard-grid">
+    <article class="card camera-card">
+      <div class="card-head"><div><span class="eyebrow">Live monitoring</span><h2>Live Field Camera</h2></div><span class="status-text" id="camera-live-status"><i></i>Connecting…</span></div>
+      <div class="camera-stage"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div class="camera-empty" id="camera-empty"><div>◉</div><strong>Camera ready</strong><small>Start live scanning to detect tomatoes.</small></div><div class="camera-status" id="camera-status">Camera initializing…</div></div>
+      <div class="camera-footer"><span class="camera-meta">HD</span><span id="camera-stats">0 tomatoes · 0 ready · 0 flagged</span><button class="secondary" id="switch-camera">↺ Switch</button><button class="primary" id="scan-button">▶ Start live scan</button></div>
+    </article>
+
+    <article class="card action-card"><div class="card-head"><div><span class="eyebrow">Priorities</span><h2>What should I do today?</h2></div></div><div id="recommendations" class="stack"></div></article>
+
+    <article class="card forecast-card"><div class="card-head"><div><span class="eyebrow">Prediction</span><h2>Harvest forecast</h2></div><button class="link-button" data-view="harvest">View all</button></div><div id="forecast" class="stack"></div></article>
+
+    <article class="card inventory-card"><div><span class="eyebrow">Live inventory</span><h2>Ripeness distribution</h2></div><div class="donut-wrap"><div class="donut" id="donut"><div><strong id="donut-total">0</strong><small>Total tomatoes</small></div></div><div id="legend" class="legend"></div></div></article>
+
+    <article class="card weather-card"><div class="card-head"><div><span class="eyebrow">Growing conditions</span><h2>Weather &amp; GDD</h2></div><span id="weather-source" class="muted">—</span></div><div id="weather-content" class="weather-content"></div></article>
+
+    <article class="card health-card"><div class="card-head"><div><span class="eyebrow">Crop health</span><h2>Farm health score</h2></div><span id="health-status" class="badge">—</span></div><div class="health-layout"><div class="score-ring" id="health-ring"><strong id="health-score">—</strong><small>/ 100</small></div><div id="health-breakdown" class="health-breakdown"></div></div><div id="health-note" class="insight"></div></article>
+
+    <article class="card analytics-card"><div class="card-head"><div><span class="eyebrow">Trending</span><h2>Analytics</h2></div><div class="segmented"><button class="active" data-days="7">7D</button><button data-days="30">30D</button><button data-days="90">90D</button></div></div><div class="chart-area" id="harvest-chart"></div><div class="mini-stats" id="mini-stats"></div></article>
+
+    <article class="card profiles-card"><div class="card-head"><div><span class="eyebrow">Tracked fruit</span><h2>Tomato profiles</h2></div><button class="link-button" data-view="tomatoes">View all</button></div><div id="profiles" class="profile-grid"></div></article>
+
+    <article class="card alerts-card"><div class="card-head"><div><span class="eyebrow">Attention</span><h2>Recent alerts</h2></div><button class="link-button" data-view="notifications">View all</button></div><div id="alerts" class="stack"></div></article>
+
+    <article class="card history-card"><div class="card-head"><div><span class="eyebrow">Activity</span><h2>Scan history</h2></div><button class="link-button" data-view="analytics">View analytics</button></div><div id="scan-history" class="history-list"></div></article>
+  </div>
+</section>
+</template>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

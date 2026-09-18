@@ -1,0 +1,7 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt) in front of the
+# TomatoIQ web service. Replace tomatoiq.example.com with your real domain
+# before deploying -- Caddy issues and renews the certificate for whatever
+# domain is listed here automatically, no manual certbot/nginx config.
+tomatoiq.example.com {
+    reverse_proxy web:8000
+}

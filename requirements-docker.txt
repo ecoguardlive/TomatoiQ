@@ -1,0 +1,21 @@
+# Runtime dependencies for the containerized FastAPI web service
+# (pwa_server.py) only -- NOT the desktop camera script.
+#
+# Deliberately narrower than requirements.txt:
+#   - opencv-python-headless instead of opencv-python: pwa_server.py only
+#     decodes/encodes image bytes, it never opens a GUI window (cv2.imshow),
+#     so the container doesn't need the GUI/X11 libraries the full package
+#     pulls in. tomato_harvest_system.py (the desktop camera script) DOES
+#     use cv2.imshow for a live preview, so it keeps using the full
+#     opencv-python from requirements.txt when run on a host, not in Docker.
+#   - streamlit and pandas are for dashboard.py/mobile_app.py, the legacy
+#     Streamlit UI -- pwa_server.py never imports either, so they're dead
+#     weight in this image.
+#   - pytest/httpx are test-only and never needed at runtime.
+opencv-python-headless>=4.8.0
+ultralytics>=8.4.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9

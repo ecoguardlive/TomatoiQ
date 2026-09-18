@@ -1,0 +1,104 @@
+{
+  "updated_at": "2026-09-15T00:34:00",
+  "total_tomatoes": 10,
+  "counts_by_class": {
+    "green": 4,
+    "half_ripened": 3,
+    "fully_ripened": 3
+  },
+  "ready_now": 3,
+  "disease_suspect_count": 2,
+  "tomatoes": [
+    {
+      "tomato_id": 1,
+      "ripeness_class": "green",
+      "estimated_harvest_date": "2026-09-26",
+      "ready_now": false,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 2,
+      "ripeness_class": "green",
+      "estimated_harvest_date": "2026-09-26",
+      "ready_now": false,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 3,
+      "ripeness_class": "green",
+      "estimated_harvest_date": "2026-09-26",
+      "ready_now": false,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 4,
+      "ripeness_class": "half_ripened",
+      "estimated_harvest_date": "2026-09-20",
+      "ready_now": false,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 5,
+      "ripeness_class": "half_ripened",
+      "estimated_harvest_date": "2026-09-20",
+      "ready_now": false,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 6,
+      "ripeness_class": "fully_ripened",
+      "estimated_harvest_date": "2026-09-15",
+      "ready_now": true,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 7,
+      "ripeness_class": "fully_ripened",
+      "estimated_harvest_date": "2026-09-15",
+      "ready_now": true,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 8,
+      "ripeness_class": "fully_ripened",
+      "estimated_harvest_date": "2026-09-15",
+      "ready_now": true,
+      "disease_suspect": false,
+      "disease_reason": null,
+      "disease_confidence": 0.0
+    },
+    {
+      "tomato_id": 9,
+      "ripeness_class": "green",
+      "estimated_harvest_date": "2026-09-26",
+      "ready_now": false,
+      "disease_suspect": true,
+      "disease_reason": "dark/necrotic patch detected",
+      "disease_confidence": 0.62
+    },
+    {
+      "tomato_id": 10,
+      "ripeness_class": "half_ripened",
+      "estimated_harvest_date": "2026-09-20",
+      "ready_now": false,
+      "disease_suspect": true,
+      "disease_reason": "pale/scald-like patch detected",
+      "disease_confidence": 0.4
+    }
+  ],
+  "estimation_method": "gdd"
+}

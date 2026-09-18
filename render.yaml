@@ -1,0 +1,29 @@
+# Render Blueprint. In the Render dashboard: New > Blueprint > select this
+# repo. Render reads this file automatically and provisions everything
+# below. See README.md's "Deploying to Render" section for the full
+# walkthrough, including the free-tier caveats this file can't express
+# (no persistent disk, sleeps after 15 min idle).
+services:
+  - type: web
+    name: tomatoiq
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # sync: false -- Render will prompt you to type these in in the
+      # dashboard rather than committing real secrets into this file.
+      - key: TOMATOIQ_AUTH_REQUIRED
+        value: "true"
+      - key: TOMATOIQ_AUTH_SECRET
+        sync: false
+      - key: TOMATOIQ_ADMIN_USERNAME
+        sync: false
+      - key: TOMATOIQ_ADMIN_PASSWORD
+        sync: false
+      # Render terminates TLS at its own edge (your custom domain or the
+      # free *.onrender.com one both get real HTTPS automatically) and
+      # forwards plain HTTP internally -- the browser still only ever sees
+      # HTTPS, so the session cookie's Secure flag stays correct here.
+      - key: TOMATOIQ_COOKIE_SECURE
+        value: "true"

@@ -1,0 +1,52 @@
+# docker compose up --build
+#
+# Starts the FastAPI web service (dashboard + browser-based live scanning).
+# The desktop camera script (tomato_harvest_system.py) is intentionally NOT
+# a service here -- it needs a physical camera device on whatever machine
+# runs it, which doesn't map cleanly onto a portable compose file across
+# Linux/Mac/Windows hosts. Run it directly on that host:
+#
+#   python tomato_harvest_system.py --source 0
+#
+# and point its "live_state_path" (harvest_config.json) at
+# ./data/live_state.json so this container picks up its output through the
+# volume mount below.
+
+services:
+  web:
+    build: .
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    volumes:
+      # Persists the SQLite database (settings, history) across restarts.
+      - ./data:/app/data
+      # Lets a host-run tomato_harvest_system.py hand off its live state to
+      # this container without rebuilding the image (see note above).
+      # NOTE: create the file first (`touch live_state.json`) before
+      # `docker compose up` -- Docker will otherwise create this path as a
+      # directory instead of a file, which is a well-known bind-mount trap.
+      # Comment this line out entirely if you're only using the browser's
+      # live scanner and never run the desktop script.
+      - ./live_state.json:/app/live_state.json:ro
+    restart: unless-stopped
+
+  # Reverse proxy with automatic HTTPS -- only needed once you're exposing
+  # this beyond localhost to a real domain. For purely local/LAN use, delete
+  # this service and change `web`'s `expose: ["8000"]` back to
+  # `ports: ["8000:8000"]` to reach it directly.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy_data:

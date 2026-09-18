@@ -1,0 +1,10 @@
+{
+  "name":"TomatoIQ — Farm Intelligence",
+  "short_name":"TomatoIQ",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#f4f7f5",
+  "theme_color":"#082e28",
+  "description":"AI-powered tomato harvest intelligence",
+  "icons":[{"src":"/assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

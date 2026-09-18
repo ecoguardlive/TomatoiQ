@@ -1,0 +1,80 @@
+{
+  "model_path": "best.pt",
+  "class_names": [
+    "green",
+    "half_ripened",
+    "fully_ripened"
+  ],
+  "_comment_harvest_days": "FALLBACK ONLY. Flat days-until-ready, used only when GDD estimation is disabled or the weather lookup fails.",
+  "harvest_days": {
+    "green": 14,
+    "half_ripened": 6,
+    "fully_ripened": 0
+  },
+  "_comment_gdd": "Growing-degree-day harvest estimation (preferred; see growing_degree_days.py). Set 'enabled' to false to use the flat harvest_days table above instead.",
+  "gdd": {
+    "enabled": true,
+    "base_temp_c": 10,
+    "cap_c": 32,
+    "assumed_avg_temp_c": 27,
+    "latitude": 7.3399,
+    "longitude": -2.3268,
+    "_comment_location": "Defaults to Sunyani, Ghana. Change to your farm's coordinates. Set latitude/longitude to null to skip live weather and always use assumed_avg_temp_c.",
+    "gdd_required": {
+      "green": 200,
+      "half_ripened": 90,
+      "fully_ripened": 0
+    },
+    "_comment_gdd_required": "Heat units (base 10C) needed from the CURRENT stage to reach harvest-ready, per typical tomato heat-unit guides. Tune per variety once you have a season of ground-truth harvest dates to calibrate against."
+  },
+  "confidence_threshold": 0.25,
+  "tracker": "bytetrack.yaml",
+  "_comment_tracking": "Track lifecycle thresholds (see TrackState in tracker_core.py). confirm_after_observations filters single-frame noise before it's ever counted as a tomato -- raise this for the live camera feed, which has many frames to judge from. lost_after_missed_frames tolerates brief occlusion without dropping the tomato from the live count. exit_after_missed_frames is how long a missing track is kept before being marked 'exited' and dropped from currently_in_frame_count (it still remains in the session's historical total).",
+  "tracking": {
+    "confirm_after_observations": 2,
+    "lost_after_missed_frames": 20,
+    "exit_after_missed_frames": 90
+  },
+  "_comment_disease": "Heuristic disease/anomaly screening (see disease_detector.py). This is a color-based screen, not a trained classifier -- see that file's docstring.",
+  "disease_screening": {
+    "enabled": true,
+    "dark_spot_ratio_thresh": 0.08,
+    "pale_patch_ratio_thresh": 0.15
+  },
+  "_comment_display": "Visual settings for the live overlay",
+  "box_colors_bgr": {
+    "green": [
+      0,
+      200,
+      0
+    ],
+    "half_ripened": [
+      0,
+      165,
+      255
+    ],
+    "fully_ripened": [
+      0,
+      0,
+      255
+    ]
+  },
+  "output_report_path": "tomato_harvest_report.csv",
+  "_comment_live_state": "Path to a small JSON file rewritten periodically for the Streamlit dashboard to poll.",
+  "live_state_path": "live_state.json",
+  "live_state_update_every_n_frames": 10,
+  "_comment_stale": "If live_state.json hasn't been rewritten in this many seconds, the detector is treated as stopped/disconnected rather than 'live', even though the file still exists.",
+  "detector_stale_after_seconds": 60,
+  "farm": {
+    "name": "Sunyani Farm",
+    "manager": null,
+    "location": {
+      "city": "Sunyani",
+      "country": "Ghana",
+      "latitude": 7.3399,
+      "longitude": -2.3268
+    },
+    "variety": null,
+    "size_hectares": null
+  }
+}
