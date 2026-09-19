@@ -98,6 +98,44 @@ def test_tracked_state_accumulates_across_requests_by_track_id(client):
     assert resp4.json()["tracked_state"]["total_tomatoes"] == 2
 
 
+def test_active_browser_scan_becomes_the_dashboard_live_source(client):
+    """This is the actual bug reported from a real deployment: a cloud host
+    with no physical camera can only ever get live data from the browser
+    scanner, but /api/dashboard's source_state() used to only look at
+    live_state.json (the desktop script's output) -- so the dashboard was
+    permanently stuck on "NO DETECTOR" / "waiting" no matter how much
+    browser scanning was happening. /api/detect must make itself the live
+    source when there's no fresher desktop file."""
+    module, http, yolo = client
+
+    before = http.get("/api/dashboard").json()
+    assert before["source"] == "waiting"
+
+    yolo.track.return_value = [make_fake_result([(1, 1, 10, 10, 7, 0, 0.9)])]
+    frame = _jpeg_bytes()
+    http.post("/api/detect", files={"frame": ("f.jpg", frame, "image/jpeg")})
+    http.post("/api/detect", files={"frame": ("f.jpg", frame, "image/jpeg")})  # 2nd sighting -> confirms
+
+    after = http.get("/api/dashboard").json()
+    assert after["source"] == "live"
+    assert after["state"]["total_tomatoes"] == 1
+
+
+def test_browser_live_source_goes_stale_after_the_configured_window(client, monkeypatch):
+    module, http, yolo = client
+    yolo.track.return_value = [make_fake_result([(1, 1, 10, 10, 7, 0, 0.9)])]
+    frame = _jpeg_bytes()
+    http.post("/api/detect", files={"frame": ("f.jpg", frame, "image/jpeg")})
+
+    # Backdate the browser state's timestamp instead of sleeping in the test.
+    stale_cutoff = module.CONFIG.get("detector_stale_after_seconds", 60)
+    old_timestamp = (module.datetime.now() - module.timedelta(seconds=stale_cutoff + 5)).isoformat(timespec="seconds")
+    module.BROWSER_LIVE_STATE["updated_at"] = old_timestamp
+
+    resp = http.get("/api/dashboard").json()
+    assert resp["source"] == "stale"
+
+
 def test_rate_limit_blocks_after_threshold(client):
     module, http, yolo = client
     yolo.track.return_value = [_make_fake_result([])]

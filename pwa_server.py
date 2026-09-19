@@ -50,6 +50,12 @@ model: YOLO | None = None
 BROWSER_TRACKER = TomatoTracker.from_config(CONFIG)
 BROWSER_FRAME_IDX = 0
 BROWSER_HARVEST_CACHE: dict[str, Any] = {}
+# The last tracked_state /api/detect actually produced from a real frame --
+# NOT recomputed on every read, so its "updated_at" reflects when a frame
+# was last processed rather than "just now". This is what lets a browser
+# scan session count as a live source (see source_state()) using the exact
+# same staleness check as the desktop's live_state.json file.
+BROWSER_LIVE_STATE: dict[str, Any] | None = None
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024        # 8MB -- a 640px JPEG frame is tens of KB; this only guards against abuse
 MAX_IMAGE_DIMENSION = 4096                 # reject decoded images larger than this on either side
@@ -179,23 +185,41 @@ def _state_age_seconds(state: dict[str, Any]) -> float | None:
 
 def source_state() -> tuple[dict[str, Any], str]:
     """Returns (state, source) where source is one of:
-    - "live":    live_state.json exists and was updated recently
-    - "stale":   live_state.json exists but hasn't been updated recently
-                 (the desktop tracker likely stopped or crashed)
-    - "waiting": no live_state.json has ever been written
-    A file existing is NOT enough to claim "live" -- staleness is checked
+    - "live":    live_state.json exists and was updated recently, OR a
+                 browser scan session has processed a frame recently (see
+                 BROWSER_LIVE_STATE) when the file source isn't live
+    - "stale":   a source exists but hasn't been updated recently (the
+                 detector -- desktop or browser -- likely stopped)
+    - "waiting": neither source has ever produced anything
+    A source existing is NOT enough to claim "live" -- staleness is checked
     so the dashboard never reports a detector as live when it has actually
-    stopped.
+    stopped. The desktop file takes priority when it's genuinely live (it
+    represents a continuous physical camera); a browser scan session is the
+    fallback live source, which matters a lot for a deployment like a
+    cloud host with no camera of its own attached -- the browser is the
+    only source of live data it will ever have.
     """
+    stale_after = CONFIG.get("detector_stale_after_seconds", 60)
+
     configured = Path(CONFIG.get("live_state_path", "live_state.json"))
     if not configured.is_absolute():
         configured = ROOT / configured
-    if configured.exists():
-        state = read_json(configured, {})
-        stale_after = CONFIG.get("detector_stale_after_seconds", 60)
-        age = _state_age_seconds(state)
-        source = "stale" if (age is not None and age > stale_after) else "live"
-        return state, source
+    file_state = read_json(configured, {}) if configured.exists() else None
+    if file_state is not None:
+        age = _state_age_seconds(file_state)
+        if age is not None and age <= stale_after:
+            return file_state, "live"
+
+    if BROWSER_LIVE_STATE is not None:
+        age = _state_age_seconds(BROWSER_LIVE_STATE)
+        if age is not None and age <= stale_after:
+            return BROWSER_LIVE_STATE, "live"
+
+    if file_state is not None:
+        return file_state, "stale"
+    if BROWSER_LIVE_STATE is not None:
+        return BROWSER_LIVE_STATE, "stale"
+
     return {
         "updated_at": None,
         "total_tomatoes": 0,
@@ -561,7 +585,7 @@ async def report() -> Response:
 
 @app.post("/api/detect")
 async def detect(request: Request, frame: UploadFile = File(...)) -> dict[str, Any]:
-    global BROWSER_FRAME_IDX
+    global BROWSER_FRAME_IDX, BROWSER_LIVE_STATE
 
     client_key = request.client.host if request.client else "unknown"
     if not DETECT_RATE_LIMITER.allow(client_key):
@@ -642,14 +666,21 @@ async def detect(request: Request, frame: UploadFile = File(...)) -> dict[str, A
         BROWSER_FRAME_IDX += 1
 
     tracked_state = build_live_state(BROWSER_TRACKER, class_names, CONFIG, BROWSER_HARVEST_CACHE)
+    # Makes this the dashboard's live source (see source_state()) when
+    # there's no fresher desktop live_state.json, and pushes the update to
+    # every connected dashboard immediately rather than waiting for the
+    # next poll -- otherwise a second person watching the dashboard while
+    # you scan wouldn't see anything change until their next 60s refresh.
+    BROWSER_LIVE_STATE = tracked_state
+    await connections.broadcast({
+        "type": "dashboard_update",
+        "source": "live",
+        "state": normalize_state(tracked_state),
+        "server_time": now_iso(),
+    })
     return {
         "detections": boxes,
         "count": len(boxes),
         "processed_at": now_iso(),
-        # Tracked/session state from the same TomatoTracker + disease-screening
-        # logic the desktop pipeline uses -- not yet merged into the desktop's
-        # live_state.json/dashboard history (see note in README/roadmap: doing
-        # so requires deciding how a browser-scan session and a desktop-camera
-        # session resolve as sources of truth if both are used at once).
         "tracked_state": tracked_state,
     }
