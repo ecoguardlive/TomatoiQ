@@ -9,6 +9,7 @@ import asyncio
 import csv
 import io
 import json
+import logging
 import threading
 import time
 from collections import defaultdict, deque
@@ -37,6 +38,10 @@ DATA = ROOT / "data"
 DATA.mkdir(exist_ok=True)
 CONFIG_PATH = ROOT / "harvest_config.json"
 CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("tomatoiq")
+
 REPOSITORY = TomatoRepository(DATA / "tomatoiq.db")
 MODEL_LOCK = asyncio.Lock()
 model: YOLO | None = None
@@ -340,7 +345,20 @@ def update_settings(update: SettingsUpdate) -> dict[str, Any]:
 def get_model() -> YOLO:
     global model
     if model is None:
+        logger.info("Loading YOLO model from %s", CONFIG["model_path"])
         model = YOLO(ROOT / CONFIG["model_path"])
+        # Render's free tier (and similar small hosts) gives a fraction of
+        # one CPU -- letting torch spawn its default thread pool (usually
+        # one thread per core it *thinks* it has) adds context-switching
+        # overhead for no benefit on a 0.5 CPU instance, and every thread
+        # has its own memory overhead on a host where RAM is the actual
+        # scarce resource (512MB on Render's free plan).
+        try:
+            import torch
+            torch.set_num_threads(1)
+        except Exception:
+            pass
+        logger.info("YOLO model loaded successfully")
     return model
 
 
@@ -616,13 +634,27 @@ async def detect(request: Request, frame: UploadFile = File(...)) -> dict[str, A
         # internal state on the model between calls, so tomatoes get a
         # stable identity across successive frames from the browser the
         # same way the desktop camera loop's ByteTrack stream does.
-        result = get_model().track(
-            image,
-            conf=CONFIG.get("confidence_threshold", 0.25),
-            tracker=CONFIG.get("tracker", "bytetrack.yaml"),
-            persist=True,
-            verbose=False,
-        )[0]
+        try:
+            result = get_model().track(
+                image,
+                conf=CONFIG.get("confidence_threshold", 0.25),
+                tracker=CONFIG.get("tracker", "bytetrack.yaml"),
+                persist=True,
+                verbose=False,
+            )[0]
+        except Exception:
+            # Deliberately logged loudly rather than left to propagate as a
+            # bare, unlabeled 500: on a memory-constrained host (Render's
+            # free tier is 512MB RAM / 0.5 CPU, and torch alone commonly
+            # uses 200-400MB just to import) a crash here is a real
+            # possibility, and needs to be visible in the deployment's log
+            # stream, not just "the request failed" with no context.
+            logger.exception(
+                "YOLO inference failed in /api/detect (image %dx%d) -- if this "
+                "repeats, the host likely doesn't have enough memory/CPU for "
+                "torch+ultralytics; check the process for OOM kills.", w, h
+            )
+            raise HTTPException(status_code=503, detail="Detector temporarily unavailable -- see server logs")
 
         boxes: list[dict[str, Any]] = []
         seen_track_ids: list[int] = []
