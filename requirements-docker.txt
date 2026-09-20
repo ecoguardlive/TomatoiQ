@@ -14,6 +14,10 @@
 #   - pytest/httpx are test-only and never needed at runtime.
 opencv-python-headless>=4.8.0
 ultralytics>=8.4.0
+# See requirements.txt for why this is required, not optional -- this is
+# the actual fix for the "ModuleNotFoundError: No module named 'lap'" crash
+# that was breaking every /api/detect call in production.
+lapx>=0.5.2
 requests>=2.31.0
 python-dotenv>=1.0.0
 fastapi>=0.115.0
